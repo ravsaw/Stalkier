@@ -1,6 +1,7 @@
 using CienPodroznika.Core.Settings;
 using UnityEngine;
 using System.Collections;
+using CienPodroznika.Core.Locations;
 
 namespace CienPodroznika.Core.Events
 {
@@ -9,33 +10,33 @@ namespace CienPodroznika.Core.Events
     {
         public GameState PreviousState { get; }
         public GameState NewState { get; }
-        
+
         public GameStateChangedEvent(GameState previousState, GameState newState)
         {
             PreviousState = previousState;
             NewState = newState;
         }
     }
-    
+
     // Event wywoływany przy zmianie lokacji
     public class LocationChangedEvent
     {
         public string PreviousLocationId { get; }
         public string NewLocationId { get; }
-        
+
         public LocationChangedEvent(string previousLocationId, string newLocationId)
         {
             PreviousLocationId = previousLocationId;
             NewLocationId = newLocationId;
         }
     }
-    
+
     // Event wywoływany przy zapisie gry
     public class GameSavedEvent
     {
         public string SaveName { get; }
         public bool Success { get; }
-        
+
         public GameSavedEvent(string saveName, bool success)
         {
             SaveName = saveName;
@@ -47,7 +48,7 @@ namespace CienPodroznika.Core.Events
     public class SettingsChangedEvent
     {
         public GameSettings Settings { get; }
-        
+
         public SettingsChangedEvent(GameSettings settings)
         {
             Settings = settings;
@@ -57,7 +58,7 @@ namespace CienPodroznika.Core.Events
     public class LocationLoadedEvent
     {
         public Location Location { get; }
-        
+
         public LocationLoadedEvent(Location location)
         {
             Location = location;
@@ -67,7 +68,7 @@ namespace CienPodroznika.Core.Events
     public class LocationUnloadedEvent
     {
         public Location Location { get; }
-        
+
         public LocationUnloadedEvent(Location location)
         {
             Location = location;
@@ -78,7 +79,7 @@ namespace CienPodroznika.Core.Events
     {
         public Location Location { get; }
         public GameObject Player { get; }
-        
+
         public PlayerEnteredLocationEvent(Location location, GameObject player)
         {
             Location = location;
@@ -90,7 +91,7 @@ namespace CienPodroznika.Core.Events
     {
         public Location Location { get; }
         public GameObject Player { get; }
-        
+
         public PlayerExitedLocationEvent(Location location, GameObject player)
         {
             Location = location;
@@ -106,8 +107,8 @@ namespace CienPodroznika.Core.Events
         public LoadingMethod LoadingMethod { get; }
         public LocationExit Exit { get; }
         public GameObject Player { get; }
-        
-        public LocationTransitionRequestedEvent(string fromLocationID, string toLocationID, 
+
+        public LocationTransitionRequestedEvent(string fromLocationID, string toLocationID,
             string spawnPointName, LoadingMethod loadingMethod, LocationExit exit, GameObject player)
         {
             FromLocationID = fromLocationID;
@@ -122,7 +123,7 @@ namespace CienPodroznika.Core.Events
     public class LocationLoadingStartedEvent
     {
         public string LocationID { get; }
-        
+
         public LocationLoadingStartedEvent(string locationID)
         {
             LocationID = locationID;
@@ -132,10 +133,82 @@ namespace CienPodroznika.Core.Events
     public class LocationLoadingCompletedEvent
     {
         public string LocationID { get; }
-        
+
         public LocationLoadingCompletedEvent(string locationID)
         {
             LocationID = locationID;
+        }
+    }
+
+    // Player movement events
+    public class PlayerJumpedEvent
+    {
+        public Vector3 Position { get; }
+
+        public PlayerJumpedEvent(Vector3 position)
+        {
+            Position = position;
+        }
+    }
+
+    public class PlayerLandedEvent
+    {
+        public Vector3 Position { get; }
+        public float FallSpeed { get; }
+
+        public PlayerLandedEvent(Vector3 position, float fallSpeed)
+        {
+            Position = position;
+            FallSpeed = fallSpeed;
+        }
+    }
+
+    public class PlayerCrouchStateChangedEvent
+    {
+        public bool IsCrouching { get; }
+
+        public PlayerCrouchStateChangedEvent(bool isCrouching)
+        {
+            IsCrouching = isCrouching;
+        }
+    }
+
+    public class PlayerMovedEvent
+    {
+        public Vector3 Position { get; }
+        public Vector3 Velocity { get; }
+        public float Speed { get; }
+
+        public PlayerMovedEvent(Vector3 position, Vector3 velocity, float speed)
+        {
+            Position = position;
+            Velocity = velocity;
+            Speed = speed;
+        }
+    }
+
+    // Player lifecycle events
+    public class PlayerSpawnedEvent
+    {
+        public GameObject Player { get; }
+        public Vector3 SpawnPosition { get; }
+
+        public PlayerSpawnedEvent(GameObject player, Vector3 spawnPosition)
+        {
+            Player = player;
+            SpawnPosition = spawnPosition;
+        }
+    }
+
+    public class PlayerTeleportedEvent
+    {
+        public Vector3 Position { get; }
+        public Quaternion Rotation { get; }
+
+        public PlayerTeleportedEvent(Vector3 position, Quaternion rotation)
+        {
+            Position = position;
+            Rotation = rotation;
         }
     }
 }

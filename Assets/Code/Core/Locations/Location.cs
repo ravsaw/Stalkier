@@ -80,7 +80,7 @@ namespace CienPodroznika.Core.Locations
             
             OnLocationLoadedInternal();
             OnLocationLoaded?.Invoke(this);
-            EventBus.Instance.Publish(new LocationLoadedEvent(this));
+            EventBus.Instance.Publish(new LocationLoadedEvent(location: this));
         }
         
         public virtual void UnloadLocation()

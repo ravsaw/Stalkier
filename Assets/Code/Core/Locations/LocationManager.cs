@@ -316,7 +316,7 @@ namespace CienPodroznika.Core.Locations
         
         private void OnLocationTransitionRequested(LocationTransitionRequestedEvent eventData)
         {
-            LoadLocation(eventData.TargetLocationID, eventData.SpawnPointName, eventData.LoadingMethod);
+            LoadLocation(eventData.ToLocationID, eventData.SpawnPointName, eventData.LoadingMethod);
         }
         
         private void OnGameStateChanged(GameStateChangedEvent eventData)

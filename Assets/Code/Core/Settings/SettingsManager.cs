@@ -46,27 +46,30 @@ namespace CienPodroznika.Core.Settings
         {
             ApplySettings();
         }
-        
+
         public void LoadSettings()
         {
             try
             {
                 string filePath = System.IO.Path.Combine(Application.persistentDataPath, SETTINGS_FILE);
-                
+
+                if (_currentSettings == null)
+                {
+                    _currentSettings = Instantiate(_defaultSettings);
+                }
+
                 if (System.IO.File.Exists(filePath))
                 {
                     string json = System.IO.File.ReadAllText(filePath);
-                    _currentSettings = JsonUtility.FromJson<GameSettings>(json);
-                    
-                    // Validate settings
-                    if (_currentSettings == null)
+                    GameSettingsData settingsData = JsonUtility.FromJson<GameSettingsData>(json);
+
+                    if (settingsData != null)
                     {
-                        _currentSettings = Instantiate(_defaultSettings);
+                        settingsData.ApplyTo(_currentSettings);
                     }
                 }
                 else
                 {
-                    _currentSettings = Instantiate(_defaultSettings);
                     SaveSettings();
                 }
             }
@@ -76,15 +79,16 @@ namespace CienPodroznika.Core.Settings
                 _currentSettings = Instantiate(_defaultSettings);
             }
         }
-        
+
         public void SaveSettings()
         {
             try
             {
-                string json = JsonUtility.ToJson(_currentSettings, true);
+                GameSettingsData settingsData = new GameSettingsData(_currentSettings);
+                string json = JsonUtility.ToJson(settingsData, true);
                 string filePath = System.IO.Path.Combine(Application.persistentDataPath, SETTINGS_FILE);
                 System.IO.File.WriteAllText(filePath, json);
-                
+
                 Debug.Log("Settings saved successfully");
                 EventBus.Instance.Publish(new SettingsChangedEvent(_currentSettings));
             }
@@ -93,7 +97,7 @@ namespace CienPodroznika.Core.Settings
                 Debug.LogError($"Failed to save settings: {ex.Message}");
             }
         }
-        
+
         public void ApplySettings()
         {
             if (_currentSettings == null) return;

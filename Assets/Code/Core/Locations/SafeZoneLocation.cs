@@ -1,5 +1,4 @@
 using UnityEngine;
-using CienPodroznika.Core.AI;
 
 namespace CienPodroznika.Core.Locations
 {
@@ -35,13 +34,8 @@ namespace CienPodroznika.Core.Locations
         protected override void OnNPCAdded(GameObject npc)
         {
             base.OnNPCAdded(npc);
-            
-            // Set NPC behavior for safe zone
-            var npcBehavior = npc.GetComponent<INPCBehavior>();
-            if (npcBehavior != null)
-            {
-                npcBehavior.SetAggression(0f); // Non-aggressive in safe zone
-            }
+
+            Debug.Log($"NPC added to safe zone: {npc.name}");
         }
         
         private void EnableSafeZoneFeatures()
