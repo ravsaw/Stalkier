@@ -11,7 +11,7 @@ System "dwóch mózgów" to dwuwarstwowa architektura AI zaprojektowana do efekt
 #### 1.1.1 Podział Warstw
 
 1. **Mózg Strategiczny (Warstwa 2D)**
-   - Symulacja globalna, niska częstotliwość aktualizacji (1-5 Hz)
+   - Symulacja globalna, niska częstotliwość aktualizacji (co 5 sekund)
    - Długoterminowe planowanie i podejmowanie decyzji
    - Zarządzanie celami wysokiego poziomu i priorytetami
    - Globalne mapowanie świata i relacje między frakcjami
