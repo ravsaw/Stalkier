@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://kay10nyvehtr"]
+
+[ext_resource type="Script" uid="uid://pnqv1euv5hkn" path="res://scripts/POIData.gd" id="1_4d4us"]
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_4d4us"]
+specular_color = Color(1, 0.215686, 1, 1)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_nluft"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mglmp"]
+
+[node name="POI" type="Node2D"]
+
+[node name="POIVisual" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="POIVisual"]
+texture = SubResource("CanvasTexture_4d4us")
+
+[node name="InteractionArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+shape = SubResource("CircleShape2D_nluft")
+
+[node name="POIBoundary" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="POIBoundary"]
+shape = SubResource("CircleShape2D_mglmp")
+
+[node name="SubObjectsContainer" type="Node2D" parent="."]
+
+[node name="POIData" type="Node" parent="."]
+script = ExtResource("1_4d4us")
