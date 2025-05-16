@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dc6a81ggpq7u6"]
+
+[ext_resource type="Script" uid="uid://c6f0r2kq8f4oq" path="res://scenes/DebugTestScene.gd" id="1_hcxtl"]
+
+[node name="DebugTestScene" type="Node3D"]
+script = ExtResource("1_hcxtl")
