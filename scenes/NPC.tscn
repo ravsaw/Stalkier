@@ -23,9 +23,10 @@ script = ExtResource("1_slm4e")
 texture = ExtResource("2_we7f3")
 
 [node name="NameLabel" type="Label" parent="NPCVisuals"]
-visible = false
-offset_right = 40.0
-offset_bottom = 23.0
+offset_left = 5.0
+offset_top = -30.0
+offset_right = 6.0
+offset_bottom = -7.0
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 

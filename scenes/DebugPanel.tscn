@@ -17,6 +17,9 @@ layout_mode = 2
 [node name="LocationInfo" type="Label" parent="."]
 layout_mode = 2
 
+[node name="Camera" type="Label" parent="."]
+layout_mode = 2
+
 [node name="Performance" type="VBoxContainer" parent="."]
 layout_mode = 2
 
