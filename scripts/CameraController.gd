@@ -12,6 +12,7 @@ var target_zoom: Vector2
 var target_position: Vector2
 
 func _ready():
+	add_to_group("camera_controller")
 	camera_2d.make_current()
 	target_zoom = camera_2d.zoom
 	target_position = global_position
@@ -75,3 +76,42 @@ func center_on_all_npcs(npc_positions: Array):
 	center /= npc_positions.size()
 	
 	target_position = center
+
+func center_on_locations():
+	var locations_container = GameGlobals.simulation_layer.get_node("LocationsContainer")
+	var locations = locations_container.get_children()
+	
+	if locations.is_empty():
+		return
+	
+	var min_pos = Vector2(INF, INF)
+	var max_pos = Vector2(-INF, -INF)
+	
+	for location in locations:
+		var pos = location.global_position
+		min_pos.x = min(min_pos.x, pos.x - GameGlobals.LOCATION_SIZE.x/2)
+		min_pos.y = min(min_pos.y, pos.y - GameGlobals.LOCATION_SIZE.y/2)
+		max_pos.x = max(max_pos.x, pos.x + GameGlobals.LOCATION_SIZE.x/2)
+		max_pos.y = max(max_pos.y, pos.y + GameGlobals.LOCATION_SIZE.y/2)
+	
+	# Center camera on all locations
+	target_position = (min_pos + max_pos) / 2
+	
+	# Adjust zoom to fit all locations
+	var size_needed = max_pos - min_pos
+	var screen_size = get_viewport().get_visible_rect().size
+	var zoom_x = screen_size.x / size_needed.x
+	var zoom_y = screen_size.y / size_needed.y
+	target_zoom = Vector2.ONE * min(zoom_x, zoom_y) * 0.8  # 0.8 for some padding
+
+# Metoda do śledzenia określonej liczby NPCs
+func focus_on_active_area():
+	var npc_manager = get_tree().get_first_node_in_group("npc_manager")
+	if not npc_manager:
+		return
+	
+	var npc_positions = []
+	for npc in npc_manager.active_npcs.values():
+		npc_positions.append(npc.global_position)
+	
+	center_on_all_npcs(npc_positions)

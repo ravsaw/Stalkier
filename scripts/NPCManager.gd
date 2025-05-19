@@ -1,7 +1,7 @@
 extends Node
 class_name NPCManager
 
-@export var initial_npc_count: int = 50
+@export var initial_npc_count: int = 1000
 @export var max_npcs: int = 300
 
 var active_npcs: Dictionary = {}

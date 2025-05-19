@@ -11,7 +11,12 @@ func _ready():
 	GameGlobals.world_manager = self
 	# Poczekaj jedną klatkę, żeby wszystkie węzły się zainicjalizowały
 	call_deferred("setup_initial_world")
-
+	
+	await get_tree().create_timer(0.5).timeout
+	var camera_controller = get_tree().get_first_node_in_group("camera_controller")
+	if camera_controller and camera_controller.has_method("center_on_locations"):
+		camera_controller.center_on_locations()
+		
 func setup_initial_world():
 	# Znajdź simulation layer bezpośrednio jeśli nie ma referencji w GameGlobals
 	if not GameGlobals.simulation_layer:
