@@ -288,6 +288,90 @@ class NeedConflictResolver:
 
 ---
 
+
+# Hybrid Simulation Paradigm
+**Add to:** Game Design Document.md - Insert as new section 4.5 after "Communication Network"
+
+## 4.5 Hybrid Individual/Group Simulation Framework
+
+### 4.5.1 Simulation Design Philosophy
+The A-Life system employs a hybrid simulation approach that combines individual NPC behavior with group-level simulation to achieve both realism and performance:
+
+- **Individual Simulation Mode**: NPCs not in groups are fully simulated with complete needs hierarchy and decision making
+- **Group Simulation Mode**: NPCs in groups follow group-level decisions for movement and actions, while maintaining individual needs
+- **Hybrid Mode**: Group movement directed by group AI, but individual needs continue to be simulated to maintain realistic satisfaction levels
+
+### 4.5.2 Simulation Mode Transitions
+
+```
+┌─────────────────┐         ┌────────────────┐         ┌────────────────┐
+│                 │         │                │         │                │
+│    Individual   │─────────▶     Hybrid     │─────────▶     Group      │
+│    Simulation   │◀────────│   Simulation   │◀────────│   Simulation   │
+│                 │         │                │         │                │
+└─────────────────┘         └────────────────┘         └────────────────┘
+      ▲                                                        │
+      │                                                        │
+      └────────────────────────────────────────────────────────┘
+```
+
+**Mode Selection Criteria:**
+- **Individual Simulation**: 
+  - NPC is not a member of any group
+  - NPC is temporarily separated from group (scouting, resource gathering)
+  - NPC is considering leaving current group
+
+- **Hybrid Simulation**:
+  - NPC is in a group but has critical needs that must be addressed
+  - Group is at a POI where individual behavior is important
+  - Group is in a resting state where members act semi-independently
+
+- **Group Simulation**:
+  - Group is traveling between POIs
+  - Group is engaged in combat
+  - Group is performing coordinated activities
+
+### 4.5.3 Decision Hierarchy
+
+```
+1. Critical Need Intervention (Individual)
+   └─▶ If any individual need crosses critical threshold
+       └─▶ Temporarily revert to individual or hybrid simulation
+
+2. Group Objectives (Group)
+   └─▶ Primary movement and activity decisions 
+       └─▶ Determined by leader and group consensus
+
+3. Individual Satisfaction (Hybrid)
+   └─▶ Regular evaluation of needs satisfaction
+       └─▶ Influences group cohesion and member retention
+```
+
+### 4.5.4 Implementation Strategy
+
+The hybrid approach will be implemented through a state management system that:
+
+1. Tracks the simulation mode of each NPC
+2. Triggers appropriate state transitions based on context
+3. Delegates decision making to either individual or group AI based on mode
+4. Ensures needs continue to be processed even during group simulation
+5. Maintains performance efficiency by reducing redundant calculations
+
+This hybrid model ensures both realistic individual behavior and performance-efficient group dynamics while providing a smooth transition between different simulation contexts.
+
+### 4.5.5 Update Frequency Optimization
+
+- **Individual Mode**: Full updates every 5-10 seconds
+- **Hybrid Mode**: Individual needs updated every 30 seconds, group behavior every 5 seconds
+- **Group Mode**: Group decisions every 5-10 seconds, minimal individual updates
+
+All modes use distance-based optimization:
+- **Immediate Range** (0-100m): Full update frequency
+- **Near Range** (100-300m): 1/4 update frequency
+- **Medium Range** (300-600m): 1/10 update frequency
+- **Far Range** (>600m): 1/20 update frequency
+
+
 ## 5. Technical Architecture
 
 ### 5.1 2D Simulation Layer
@@ -1096,6 +1180,443 @@ class POIStatusUI:
 - Long-term consequences emerge from seemingly small actions
 
 ---
+
+
+## 7.7 POI-Group Interaction Framework
+
+The interaction between groups and Points of Interest (POIs) forms a critical component of the emergent gameplay, creating dynamic situations and driving narrative through systematic encounters.
+
+### 7.7.1 Group-POI Relationship Types
+
+Groups interact with POIs through several relationship models that define their interactions:
+
+```
+┌─────────────────┐      ┌───────────────────┐
+│                 │      │                   │
+│     Groups      │◀────▶│       POIs        │
+│                 │      │                   │
+└─────────────────┘      └───────────────────┘
+        │                          │
+        ▼                          ▼
+┌─────────────────────────────────────────────┐
+│                                             │
+│           Relationship Types                │
+│                                             │
+├─────────────────────────────────────────────┤
+│ • Visitor (Temporary access)                │
+│ • Resident (Long-term occupation)           │
+│ • Controller (Administrative authority)     │
+│ • Competitor (Seeking control)              │
+│ • Trader (Economic relationship)            │
+│ • Defender (Military protection)            │
+└─────────────────────────────────────────────┘
+```
+
+#### 1. Visitor Relationship
+- **Duration**: Short-term (hours)
+- **Access Level**: Limited
+- **Resource Access**: Minimal, with payment
+- **Example Activities**: Trading, gathering information, resting
+- **Impact on POI**: Minimal, primarily economic
+
+#### 2. Resident Relationship
+- **Duration**: Long-term (days to permanent)
+- **Access Level**: Standard
+- **Resource Access**: Moderate, based on contribution
+- **Example Activities**: Living, working, community participation
+- **Impact on POI**: Demographic influence, skill contribution
+
+#### 3. Controller Relationship
+- **Duration**: Persistent until challenged
+- **Access Level**: Complete
+- **Resource Access**: Administrative control
+- **Example Activities**: Setting policies, defense planning, taxation
+- **Impact on POI**: Major - determines all policies and direction
+
+#### 4. Competitor Relationship
+- **Duration**: Until control obtained or abandoned
+- **Access Level**: Contested
+- **Resource Access**: Only through conflict or negotiation
+- **Example Activities**: Infiltration, undermining, challenging authority
+- **Impact on POI**: Creates tension, potentially violent change
+
+#### 5. Trader Relationship
+- **Duration**: Recurring visits
+- **Access Level**: Commercial areas only
+- **Resource Access**: Market participation
+- **Example Activities**: Buying, selling, establishing trade routes
+- **Impact on POI**: Economic development, resource flow
+
+#### 6. Defender Relationship
+- **Duration**: As needed for security
+- **Access Level**: Security infrastructure
+- **Resource Access**: Military resources
+- **Example Activities**: Patrolling, fortification, security operations
+- **Impact on POI**: Enhanced security, potential militarization
+
+### 7.7.2 Group Encounter System at POIs
+
+When multiple groups are present at the same POI, a systematic encounter process occurs:
+
+```gdscript
+# Group encounter detection at POIs
+func check_poi_group_encounters():
+    var groups_by_poi = {}
+    var active_groups = get_all_groups()
+    
+    # Organize groups by current POI
+    for group in active_groups:
+        if group.current_poi_id != "":
+            if not group.current_poi_id in groups_by_poi:
+                groups_by_poi[group.current_poi_id] = []
+            groups_by_poi[group.current_poi_id].append(group)
+    
+    # Create encounters for groups at same POI
+    for poi_id in groups_by_poi:
+        var poi_groups = groups_by_poi[poi_id]
+        
+        if poi_groups.size() < 2:
+            continue
+        
+        for i in range(poi_groups.size()):
+            for j in range(i + 1, poi_groups.size()):
+                create_poi_encounter(poi_groups[i], poi_groups[j], poi_id)
+```
+
+#### Encounter Context Factors
+
+POI-specific factors that influence group encounters:
+
+| Factor | Description | Impact |
+|--------|-------------|--------|
+| POI Type | Settlement, resource site, etc. | Determines encounter dynamics and available resources |
+| POI Control | Which faction controls the POI | Affects which groups have advantage/authority |
+| Population Density | Number of NPCs present | Higher density increases encounter frequency |
+| Resource Availability | Abundance/scarcity of resources | Affects competition level between groups |
+| Security Level | How well-defended the POI is | Determines if violent encounters are feasible |
+| Neutrality Status | Whether POI has protected status | May prohibit certain encounter types |
+
+#### POI-Specific Encounter Resolution
+
+```gdscript
+func resolve_poi_encounter(group1, group2, poi_id):
+    var poi = get_poi(poi_id)
+    var relation_type = determine_encounter_relation(group1, group2, poi)
+    
+    # Each POI type has different encounter dynamics
+    match poi.type:
+        "settlement":
+            return resolve_settlement_encounter(group1, group2, poi, relation_type)
+        "outpost":
+            return resolve_outpost_encounter(group1, group2, poi, relation_type)
+        "resource_site":
+            return resolve_resource_site_encounter(group1, group2, poi, relation_type)
+        "neutral_zone":
+            return resolve_neutral_zone_encounter(group1, group2, poi, relation_type)
+        "wilderness":
+            return resolve_wilderness_encounter(group1, group2, poi, relation_type)
+```
+
+### 7.7.3 Resource Competition at POIs
+
+Groups compete for limited POI resources through various mechanisms:
+
+#### Resource Access Priority System
+
+```gdscript
+func calculate_resource_access_priority(group, poi):
+    var priority = 0.0
+    
+    # Base priority on relationship type
+    match get_group_poi_relationship(group, poi):
+        "controller":
+            priority += 5.0
+        "resident":
+            priority += 3.0
+        "defender":
+            priority += 2.5
+        "trader":
+            priority += 2.0
+        "visitor":
+            priority += 1.0
+        "competitor":
+            priority += 0.5
+    
+    # Faction relationship with controlling faction
+    if poi.controlled_by != "":
+        var faction_relation = get_faction_relationship(group.faction_id, poi.controlled_by)
+        priority += faction_relation * 2.0
+    
+    # Other modifiers
+    priority += group.members.size() * 0.1  # Group size
+    priority += group.reputation_at_poi(poi.id) * 2.0  # Reputation
+    priority += group.resource_contribution_to_poi(poi.id)  # Past contributions
+    
+    return priority
+```
+
+#### Resource Competition Triggers
+
+Resource competition occurs when multiple groups seek the same limited resources:
+
+1. **Scheduled Resource Distribution**
+   - POI releases resources on regular schedule
+   - Groups with highest priority get first access
+   - Distribution by percentage based on priority
+
+2. **Overlapping Resource Gathering**
+   - Multiple groups attempt to gather same resource
+   - Priority determines gathering speed and yield
+   - May trigger negotiation or conflict
+
+3. **Exclusive Resource Access**
+   - Critical resources limited to one group
+   - Access determined by highest priority
+   - Lower priority groups must wait or negotiate
+
+### 7.7.4 POI Control Challenges
+
+Groups can challenge current POI controllers through several mechanisms:
+
+```gdscript
+# Group challenges POI control
+func initiate_poi_control_challenge(challenger_group, poi):
+    var current_controller = get_controlling_faction(poi)
+    var challenge_type = determine_challenge_type(challenger_group, poi)
+    
+    match challenge_type:
+        "military":
+            return initiate_military_takeover(challenger_group, poi, current_controller)
+        "economic":
+            return initiate_economic_takeover(challenger_group, poi, current_controller)
+        "political":
+            return initiate_political_takeover(challenger_group, poi, current_controller)
+        "revolt":
+            return initiate_population_revolt(challenger_group, poi, current_controller)
+```
+
+#### Military Takeover
+
+```gdscript
+func initiate_military_takeover(challenger_group, poi, current_controller):
+    # Identify strategic control points within POI
+    var control_points = identify_strategic_points(poi)
+    
+    # Calculate military strength of both sides
+    var attacker_strength = calculate_group_combat_strength(challenger_group)
+    var defender_strength = calculate_poi_defense_strength(poi)
+    
+    # Create siege/battle event
+    var battle = {
+        "type": "poi_takeover_battle",
+        "attacker": challenger_group.id,
+        "defender": current_controller,
+        "poi": poi.id,
+        "control_points": control_points,
+        "attacker_strength": attacker_strength,
+        "defender_strength": defender_strength,
+        "start_time": Time.get_unix_time_from_system(),
+        "status": "ongoing"
+    }
+    
+    # Register battle in event system
+    register_poi_battle(battle)
+    
+    return battle
+```
+
+#### Economic Takeover
+
+```gdscript
+func initiate_economic_takeover(challenger_group, poi, current_controller):
+    # Calculate economic influence thresholds
+    var total_economy = poi.economics.daily_transaction_volume
+    var control_threshold = total_economy * 0.25  # 25% for significant influence
+    
+    # Track economic influence over time
+    var takeover = {
+        "type": "economic_takeover",
+        "challenger": challenger_group.id,
+        "current_controller": current_controller,
+        "poi": poi.id,
+        "control_threshold": control_threshold,
+        "current_influence": 0.0,
+        "start_time": Time.get_unix_time_from_system(),
+        "status": "ongoing"
+    }
+    
+    # Register economic takeover attempt
+    register_economic_takeover(takeover)
+    
+    return takeover
+```
+
+### 7.7.5 Group Activities at POIs
+
+Groups engage in different activities based on their relationship with the POI:
+
+| Relationship | Primary Activities | Secondary Activities | Special Actions |
+|--------------|-------------------|----------------------|----------------|
+| Visitor | Trading, Information Gathering | Resource Collection, Recruiting | Create Alliance Offers |
+| Resident | Working, Producing Goods | Local Defense, Community Building | Form Sub-Groups |
+| Controller | Policy Setting, Defense Organization | Resource Management, Infrastructure Development | Form POI Government |
+| Competitor | Intelligence Gathering, Subversion | Recruitment, Alliance Building | Launch Control Challenge |
+| Trader | Market Operations, Route Establishment | Caravan Organization, Price Negotiation | Establish Trading Monopoly |
+| Defender | Patrolling, Fortification | Training, Surveillance | Implement Security Measures |
+
+#### Activity Implementation Example
+
+```gdscript
+func process_group_at_poi(group, poi, delta):
+    # Get relationship type
+    var relationship = get_group_poi_relationship(group, poi)
+    
+    # Primary activity selection based on relationship
+    var primary_activity = select_primary_activity(group, poi, relationship)
+    
+    # Process activity
+    match primary_activity:
+        "trading":
+            process_trading_activity(group, poi, delta)
+        "resource_gathering":
+            process_resource_gathering(group, poi, delta)
+        "patrolling":
+            process_patrol_activity(group, poi, delta)
+        "policy_setting":
+            process_policy_activity(group, poi, delta)
+        "intelligence_gathering":
+            process_intelligence_activity(group, poi, delta)
+        "working":
+            process_work_activity(group, poi, delta)
+    
+    # Check for secondary activity opportunity
+    if can_perform_secondary_activity(group, poi):
+        perform_secondary_activity(group, poi)
+```
+
+### 7.7.6 POI-Group Memory & Relationship Tracking
+
+POIs maintain memory of past group interactions:
+
+```gdscript
+# POI memory of group interactions
+class POIGroupMemory:
+    var group_history: Dictionary = {}  # By group ID
+    var faction_history: Dictionary = {}  # By faction ID
+    var notable_events: Array = []
+    var access_permissions: Dictionary = {}
+    var banned_groups: Array = []
+    
+    func record_group_visit(group, visit_data):
+        if not group.id in group_history:
+            group_history[group.id] = []
+        
+        group_history[group.id].append({
+            "visit_time": Time.get_unix_time_from_system(),
+            "duration": visit_data.duration,
+            "relationship": visit_data.relationship,
+            "notable_actions": visit_data.actions,
+            "resource_impact": visit_data.resource_impact,
+            "economic_impact": visit_data.economic_impact
+        })
+        
+        # Update faction history
+        if group.faction_id != "":
+            update_faction_history(group.faction_id, visit_data)
+    
+    func get_group_standing(group_id):
+        var standing = 0.0  # Neutral default
+        
+        if group_id in group_history:
+            var visits = group_history[group_id]
+            var relevant_visits = get_recent_visits(visits, 5)
+            
+            for visit in relevant_visits:
+                standing += calculate_visit_impact(visit)
+            
+            if relevant_visits.size() > 0:
+                standing /= relevant_visits.size()
+        
+        return clamp(standing, -1.0, 1.0)
+```
+
+### 7.7.7 Integration with Other Systems
+
+The POI-Group interaction framework integrates with several other game systems:
+
+#### Faction System Integration
+
+```gdscript
+# POI-Group-Faction integration
+func update_faction_poi_relationship(faction_id, poi_id, relationship_change):
+    var faction = get_faction(faction_id)
+    var poi = get_poi(poi_id)
+    
+    # Update faction's control or influence
+    if relationship_change > 0.5 and poi.controlled_by == "":
+        attempt_faction_poi_control(faction_id, poi_id)
+    
+    # Update faction goals related to this POI
+    update_faction_poi_goals(faction_id, poi_id, relationship_change)
+    
+    # Notify faction members of relationship change
+    notify_faction_members_of_poi_change(faction_id, poi_id, relationship_change)
+```
+
+#### Economic System Integration
+
+```gdscript
+# Group impact on POI economics
+func process_group_economic_impact(group, poi, duration):
+    var economic_impact = {
+        "trade_volume": calculate_group_trade_volume(group, poi),
+        "resource_contribution": calculate_resource_contribution(group, poi),
+        "resource_consumption": calculate_resource_consumption(group, poi),
+        "infrastructure_investment": calculate_group_investment(group, poi),
+        "tax_contribution": calculate_tax_contribution(group, poi)
+    }
+    
+    # Apply economic impact
+    apply_economic_effects(poi, economic_impact)
+    
+    # Update economic reputation
+    update_economic_reputation(group, poi, economic_impact)
+    
+    return economic_impact
+```
+
+#### Event System Integration
+
+```gdscript
+# POI-Group events
+func create_poi_group_event(group, poi, event_type):
+    var event = {
+        "id": generate_unique_id(),
+        "type": event_type,
+        "group_id": group.id,
+        "poi_id": poi.id,
+        "timestamp": Time.get_unix_time_from_system(),
+        "witnesses": get_event_witnesses(group, poi),
+        "impact_level": determine_event_impact_level(event_type)
+    }
+    
+    # Add event specific data
+    match event_type:
+        "control_change":
+            event.old_controller = poi.controlled_by
+            event.new_controller = group.faction_id
+        "resource_discovery":
+            event.resource_type = get_discovered_resource(group, poi)
+            event.quantity = get_discovered_quantity()
+        "group_conflict":
+            event.opposing_group = get_opposing_group(group, poi)
+            event.conflict_outcome = generate_conflict_outcome(group, event.opposing_group)
+    
+    # Register event
+    register_dynamic_event(event)
+    
+    return event
+```
 
 ## 8. World Design
 
