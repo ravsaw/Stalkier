@@ -17,9 +17,6 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-EventBus="*res://scripts/autoload/EventBus.gd"
-GameGlobals="*res://scripts/autoload/GameGlobals.gd"
-
 [input]
 
 zoom_in={
