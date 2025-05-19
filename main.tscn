@@ -1,0 +1,42 @@
+[gd_scene load_steps=9 format=3 uid="uid://d2k5048q4ylgj"]
+
+[ext_resource type="PackedScene" uid="uid://bxlevleohiay" path="res://player/player_controller.tscn" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://d4eg6griojvg0" path="res://ui/hud.tscn" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://dwk0hvkx6gc8d" path="res://world/location_manager.gd" id="3_h2yge"]
+[ext_resource type="PackedScene" uid="uid://dpbo8sx4ycosr" path="res://world/locations/settlement_01.tscn" id="4_1bvp3"]
+
+[sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_1bvp3"]
+turbidity = 126.67
+sun_disk_scale = 85.0
+energy_multiplier = 9.53
+
+[sub_resource type="Sky" id="Sky_lquwl"]
+sky_material = SubResource("PhysicalSkyMaterial_1bvp3")
+
+[sub_resource type="Environment" id="Environment_7mycd"]
+background_mode = 2
+sky = SubResource("Sky_lquwl")
+volumetric_fog_emission_energy = 5.15
+volumetric_fog_anisotropy = -0.3
+volumetric_fog_length = 59.65
+volumetric_fog_detail_spread = 1.97926
+volumetric_fog_sky_affect = 0.42
+
+[sub_resource type="CameraAttributesPhysical" id="CameraAttributesPhysical_1bvp3"]
+auto_exposure_enabled = true
+
+[node name="Game" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("1_ig7tw")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4521, 0)
+
+[node name="Hud" parent="." instance=ExtResource("2_0xm2m")]
+
+[node name="LocationManager" type="Node" parent="."]
+script = ExtResource("3_h2yge")
+starting_location = ExtResource("4_1bvp3")
+metadata/_custom_type_script = "uid://dwk0hvkx6gc8d"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_7mycd")
+camera_attributes = SubResource("CameraAttributesPhysical_1bvp3")

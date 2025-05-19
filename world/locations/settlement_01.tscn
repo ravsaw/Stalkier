@@ -1,0 +1,39 @@
+[gd_scene load_steps=10 format=3 uid="uid://dpbo8sx4ycosr"]
+
+[ext_resource type="Script" uid="uid://cso13kyvvylhb" path="res://world/locations/location_base.gd" id="1_dk3ry"]
+[ext_resource type="Texture2D" uid="uid://diybfqbqllobu" path="res://assets/hospital/textures/None_medicsubsta_creteborder.png_baseColor.png" id="2_l6fdx"]
+[ext_resource type="PackedScene" uid="uid://bxlevleohiay" path="res://player/player_controller.tscn" id="2_xv15r"]
+[ext_resource type="PackedScene" uid="uid://j8vrvbhbpl63" path="res://world/pois/settlement_poi.tscn" id="4_d80i2"]
+[ext_resource type="PackedScene" uid="uid://by0dx4gdn64b7" path="res://world/pois/resource_poi.tscn" id="5_l6fdx"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_dk3ry"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7gig5"]
+albedo_texture = ExtResource("2_l6fdx")
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_xv15r"]
+size = Vector2(100, 100)
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_iymsb"]
+
+[node name="Settlement01" type="Node3D"]
+script = ExtResource("1_dk3ry")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+physics_material_override = SubResource("PhysicsMaterial_dk3ry")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
+material_override = SubResource("StandardMaterial3D_7gig5")
+mesh = SubResource("PlaneMesh_xv15r")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("WorldBoundaryShape3D_iymsb")
+
+[node name="PlayerController" parent="." instance=ExtResource("2_xv15r")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.948, 1.30203, 0)
+
+[node name="SettlementPoi" parent="." instance=ExtResource("4_d80i2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.7786, 1.90735e-06, -29.5503)
+
+[node name="ResourcePoi" parent="." instance=ExtResource("5_l6fdx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -51.1647, 0.113124, 22.0414)

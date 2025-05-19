@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3 uid="uid://by0dx4gdn64b7"]
+
+[ext_resource type="Script" uid="uid://cabe6land3pwb" path="res://world/pois/poi_base.gd" id="1_5wxbg"]
+[ext_resource type="PackedScene" uid="uid://b6sncdvtsv2p0" path="res://assets/hospital/scene.gltf" id="2_7n3iy"]
+
+[node name="ResourcePoi" type="Node3D"]
+script = ExtResource("1_5wxbg")
+
+[node name="Sketchfab_Scene" parent="." instance=ExtResource("2_7n3iy")]

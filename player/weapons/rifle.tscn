@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://dyru111mjjx8y"]
+
+[ext_resource type="Script" uid="uid://nlkwd3s4bpg4" path="res://player/weapons/weapon_base.gd" id="1_q4eue"]
+
+[node name="Rifle" type="Node3D"]
+script = ExtResource("1_q4eue")
+weapon_name = "Rifle"
+weapon_class = 0
+fire_mode = 2
+max_ammo = 120
+reserve_ammo = 480
+metadata/_custom_type_script = "uid://nlkwd3s4bpg4"
