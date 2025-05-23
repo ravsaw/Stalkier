@@ -1,0 +1,110 @@
+[gd_scene load_steps=2 format=3 uid="uid://dfjwr4qjxg0jj"]
+
+[ext_resource type="Script" uid="uid://ixqalexy8k51" path="res://scenes/ui/ui_controller.gd" id="1_urrig"]
+
+[node name="UIController" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1_urrig")
+
+[node name="TopBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+
+[node name="TimeLabel" type="Label" parent="TopBar"]
+layout_mode = 0
+offset_left = 50.0
+offset_right = 163.0
+offset_bottom = 60.0
+text = "Time"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DayLabel" type="Label" parent="TopBar"]
+offset_left = 163.0
+offset_top = 1.0
+offset_right = 276.0
+offset_bottom = 61.0
+text = "Day"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SpeedLabel" type="Label" parent="TopBar"]
+offset_left = 276.0
+offset_top = 3.0
+offset_right = 389.0
+offset_bottom = 63.0
+text = "Speed"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PopulationLabel" type="Label" parent="TopBar"]
+offset_left = 389.0
+offset_top = 3.0
+offset_right = 502.0
+offset_bottom = 63.0
+text = "Population"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SelectedPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -261.0
+offset_top = 61.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="SelectedPanel"]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="NameLabel" type="Label" parent="SelectedPanel/VBox"]
+layout_mode = 2
+text = "Name"
+
+[node name="InfoText" type="RichTextLabel" parent="SelectedPanel/VBox"]
+layout_mode = 2
+bbcode_enabled = true
+text = "Info"
+fit_content = true
+
+[node name="NeedsContainer" type="VBoxContainer" parent="SelectedPanel/VBox"]
+clip_contents = true
+layout_mode = 2
+
+[node name="StatisticsPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_top = 63.0
+offset_right = 200.0
+grow_vertical = 2
+
+[node name="StatsText" type="RichTextLabel" parent="StatisticsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+text = "Info"
+fit_content = true

@@ -1,7 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://c2g0878y7bqws"]
-
-[ext_resource type="Script" uid="uid://nlkwd3s4bpg4" path="res://player/weapons/weapon_base.gd" id="1_6w7b7"]
-
-[node name="Pistol" type="Node3D"]
-script = ExtResource("1_6w7b7")
-metadata/_custom_type_script = "uid://nlkwd3s4bpg4"

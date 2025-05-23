@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://b0hwi0088e2lc"]
-
-[ext_resource type="Script" uid="uid://cso13kyvvylhb" path="res://world/locations/location_base.gd" id="1_8wbjp"]
-
-[node name="Outpost01" type="Node3D"]
-script = ExtResource("1_8wbjp")

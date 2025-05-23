@@ -1,7 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://j8vrvbhbpl63"]
-
-[ext_resource type="PackedScene" uid="uid://djiepojjwguxd" path="res://assets/chata/scene.gltf" id="1_fkj51"]
-
-[node name="SettlementPoi" type="Node3D"]
-
-[node name="Sketchfab_Scene" parent="." instance=ExtResource("1_fkj51")]
