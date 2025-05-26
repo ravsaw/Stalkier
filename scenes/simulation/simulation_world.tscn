@@ -22,3 +22,5 @@ edge_scroll_speed = 0.0
 [node name="UILayer" type="CanvasLayer" parent="."]
 
 [node name="UIController" parent="UILayer" instance=ExtResource("3_atiri")]
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]

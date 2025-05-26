@@ -11,6 +11,7 @@ var is_selected: bool = false
 @onready var name_label: Label = $NameLabel
 @onready var selection_indicator: Node2D = $SelectionIndicator
 @onready var group_indicator: Node2D = $GroupIndicator
+@onready var navigation_agent: NavigationAgent2D = $NavigationAgent2D
 
 # === COLORS ===
 var color_by_specialization = {
@@ -27,6 +28,10 @@ var importance_scale = {
 	NPC.NPCImportance.NOTABLE: 1.2,
 	NPC.NPCImportance.LEGENDARY: 1.5
 }
+
+# === DEBUG VISUALIZATION ===
+var show_navigation_path: bool = false
+var navigation_path: PackedVector2Array = []
 
 signal npc_clicked(npc: NPC)
 
@@ -47,6 +52,21 @@ func _ready():
 	# Initially hide selection
 	if selection_indicator:
 		selection_indicator.visible = false
+	
+	# Configure navigation agent
+	if navigation_agent:
+		navigation_agent.path_postprocessing = NavigationPathQueryParameters2D.PATH_POSTPROCESSING_CORRIDORFUNNEL
+		navigation_agent.avoidance_enabled = true
+		navigation_agent.radius = 2.0
+		navigation_agent.neighbor_distance = 10.0
+		navigation_agent.max_neighbors = 10
+		navigation_agent.time_horizon = 1.0
+		navigation_agent.max_speed = 50.0
+		
+		# Connect navigation signals
+		navigation_agent.velocity_computed.connect(_on_velocity_computed)
+		navigation_agent.navigation_finished.connect(_on_navigation_finished)
+		navigation_agent.path_changed.connect(_on_path_changed)
 
 func setup(npc_ref: NPC):
 	npc = npc_ref
@@ -55,12 +75,39 @@ func setup(npc_ref: NPC):
 	# Set initial position
 	position = npc.position
 
-func _process(_delta: float):
+func get_navigation_agent() -> NavigationAgent2D:
+	return navigation_agent
+
+func _physics_process(delta: float):
 	if not npc:
 		return
 	
-	# Update position smoothly
-	position = position.lerp(npc.position, 0.1)
+	# Sync position from NPC to visual
+	position = npc.position
+	
+	# Update navigation agent position
+	if navigation_agent and npc.is_navigating:
+		
+		# Calculate velocity for avoidance
+		if not navigation_agent.is_navigation_finished():
+			var next_position = navigation_agent.get_next_path_position()
+			var direction = (next_position - global_position).normalized()
+			var desired_velocity = direction * npc.movement_speed
+			
+			if navigation_agent.avoidance_enabled:
+				navigation_agent.velocity = desired_velocity
+			else:
+				# Direct movement without avoidance
+				npc.position = npc.position + desired_velocity * delta
+	
+	# Update debug visualization
+	if show_navigation_path and navigation_agent:
+		navigation_path = navigation_agent.get_current_navigation_path()
+		queue_redraw()
+
+func _process(_delta: float):
+	if not npc:
+		return
 	
 	# Update visuals
 	update_visual()
@@ -102,6 +149,19 @@ func update_visual():
 	if group_indicator:
 		group_indicator.visible = npc.group != null and npc.group.leader == npc
 
+func _on_velocity_computed(safe_velocity: Vector2):
+	# Apply computed velocity that avoids other agents
+	if npc and npc.is_navigating:
+		npc.position = npc.position + safe_velocity * get_physics_process_delta_time()
+
+func _on_navigation_finished():
+	if npc:
+		npc.is_navigating = false
+
+func _on_path_changed():
+	if show_navigation_path:
+		queue_redraw()
+
 func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -116,6 +176,7 @@ func _on_mouse_exited():
 
 func select():
 	is_selected = true
+	show_navigation_path = true
 	if selection_indicator:
 		selection_indicator.visible = true
 	if name_label:
@@ -123,6 +184,7 @@ func select():
 
 func deselect():
 	is_selected = false
+	show_navigation_path = false
 	if selection_indicator:
 		selection_indicator.visible = false
 	if name_label and scale.x <= 1.0:
@@ -134,10 +196,24 @@ func _draw():
 		var leader_pos = npc.group.leader.position - position
 		draw_line(Vector2.ZERO, leader_pos, Color(0.3, 0.3, 0.3, 0.3), 1.0)
 	
-	# Draw target position when moving
-	if npc and npc.position.distance_to(npc.target_position) > 1.0:
-		var target_dir = (npc.target_position - npc.position).normalized()
-		draw_line(Vector2.ZERO, target_dir * 20, Color.YELLOW, 1.0)
+	# Draw navigation path
+	if show_navigation_path and navigation_path.size() > 0:
+		# Draw path line
+		for i in range(navigation_path.size() - 1):
+			var from = navigation_path[i] - global_position
+			var to = navigation_path[i + 1] - global_position
+			draw_line(from, to, Color.YELLOW, 2.0)
+		
+		# Draw path points
+		for point in navigation_path:
+			var local_point = point - global_position
+			draw_circle(local_point, 2.0, Color.ORANGE)
+		
+		# Draw target
+		if npc:
+			var target_local = npc.target_position - global_position
+			draw_circle(target_local, 4.0, Color.RED)
+			draw_line(Vector2.ZERO, target_local * 0.3, Color.RED, 2.0)
 
 # === SCENE STRUCTURE ===
 # NPC2D (Node2D)
@@ -145,4 +221,5 @@ func _draw():
 # ├── HealthBar (ProgressBar)
 # ├── NameLabel (Label)
 # ├── SelectionIndicator (Node2D with custom draw)
-# └── GroupIndicator (Node2D with custom draw)
+# ├── GroupIndicator (Node2D with custom draw)
+# └── NavigationAgent2D

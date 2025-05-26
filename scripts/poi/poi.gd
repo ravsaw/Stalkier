@@ -8,6 +8,9 @@ var name: String
 var position: Vector2
 var poi_type: int = POIType.SMALL_CAMP
 
+# === NAVIGATION ===
+var is_accessible: bool = true  # Whether POI can be reached via navigation
+
 # === SLOTY ===
 var slots: Dictionary = {}  # SlotType -> Array of slots
 var total_capacity: int = 0
@@ -268,5 +271,6 @@ func to_dict() -> Dictionary:
 		"position": {"x": position.x, "y": position.y},
 		"occupancy_rate": get_occupancy_rate(),
 		"controller": controlling_group.name if controlling_group else "None",
-		"resources": available_resources
+		"resources": available_resources,
+		"is_accessible": is_accessible
 	}

@@ -7,6 +7,7 @@ extends Node2D
 @onready var npcs_container: Node2D = $NPCs
 @onready var pois_container: Node2D = $POIs
 @onready var grid_overlay: Node2D = $GridOverlay
+@onready var navigation_region: NavigationRegion2D = $NavigationRegion2D
 
 # === VISUAL NODES ===
 var npc_nodes: Dictionary = {}  # npc_id -> NPC2D node
@@ -18,8 +19,15 @@ var npc_2d_scene = preload("res://scenes/simulation/npc_2d.tscn")
 # === SELECTION ===
 var selected_npc_node: Node2D = null
 
+# === NAVIGATION ===
+var navigation_polygon: NavigationPolygon
+var world_bounds: Rect2 = Rect2(0, 0, 400, 400)  # 100x100 units * 4 scale
+
 func _ready():
 	print("SimulationWorld ready")
+	
+	# Set up navigation
+	setup_navigation_region()
 	
 	# Connect to events
 	EventBus.connect("npc_spawned", _on_npc_spawned)
@@ -30,6 +38,68 @@ func _ready():
 	
 	# Set up grid
 	setup_grid_overlay()
+
+func setup_navigation_region():
+	# Create navigation polygon for the entire world
+	navigation_polygon = NavigationPolygon.new()
+	
+	# Define outer world boundary
+	var outer_boundary = PackedVector2Array([
+		Vector2(0, 0),
+		Vector2(world_bounds.size.x, 0),
+		Vector2(world_bounds.size.x, world_bounds.size.y),
+		Vector2(0, world_bounds.size.y)
+	])
+	
+	navigation_polygon.add_outline(outer_boundary)
+	
+	# Add obstacles for POIs (they will create holes in navigation)
+	setup_poi_obstacles()
+	
+	# Build the navigation mesh
+	navigation_polygon.make_polygons_from_outlines()
+	
+	# Apply to navigation region
+	navigation_region.navigation_polygon = navigation_polygon
+	
+	print("Navigation region set up with bounds: ", world_bounds)
+
+func setup_poi_obstacles():
+	# Create navigation obstacles for each POI
+	for poi in POIManager.get_all_pois():
+		add_poi_obstacle(poi)
+
+func add_poi_obstacle(poi: POI):
+	# Define obstacle size based on POI type
+	var obstacle_size = get_poi_obstacle_size(poi.poi_type)
+	var half_size = obstacle_size * 0.5
+	
+	# Create obstacle outline (clockwise for holes)
+	var obstacle_outline = PackedVector2Array([
+		poi.position + Vector2(-half_size, -half_size),
+		poi.position + Vector2(-half_size, half_size),
+		poi.position + Vector2(half_size, half_size),
+		poi.position + Vector2(half_size, -half_size)
+	])
+	
+	navigation_polygon.add_outline(obstacle_outline)
+
+func get_poi_obstacle_size(poi_type: int) -> float:
+	match poi_type:
+		POI.POIType.MAIN_BASE:
+			return 8.0
+		POI.POIType.MILITARY_POST:
+			return 6.0
+		POI.POIType.CIVILIAN_SETTLEMENT:
+			return 7.0
+		POI.POIType.ANOMALY_ZONE:
+			return 10.0  # Larger avoidance area
+		POI.POIType.TRADING_POST:
+			return 5.0
+		POI.POIType.SMALL_CAMP:
+			return 3.0
+		_:
+			return 4.0
 
 func create_all_visuals():
 	# Create NPC visuals
@@ -51,6 +121,9 @@ func create_npc_visual(npc: NPC):
 	
 	npcs_container.add_child(npc_node)
 	npc_nodes[npc.npc_id] = npc_node
+	
+	# Register navigation agent with the NPC
+	npc.set_navigation_agent(npc_node.get_navigation_agent())
 
 func create_poi_visual(poi: POI):
 	if poi.poi_id in poi_nodes:
@@ -102,6 +175,11 @@ func create_poi_visual(poi: POI):
 	
 	area.input_event.connect(func(_viewport, event, _shape_idx): _on_poi_input(event, poi))
 	
+	# Add NavigationObstacle2D for dynamic avoidance
+	var obstacle = NavigationObstacle2D.new()
+	obstacle.radius = get_poi_obstacle_size(poi.poi_type) * 0.5
+	poi_node.add_child(obstacle)
+	
 	pois_container.add_child(poi_node)
 	poi_nodes[poi.poi_id] = poi_node
 
@@ -121,8 +199,8 @@ func _on_grid_overlay_draw():
 	# Draw vertical lines
 	for x in range(0, 101, grid_size):
 		grid_overlay.draw_line(
-			Vector2(x, 0),
-			Vector2(x, 100),
+			Vector2(x * 4, 0),
+			Vector2(x * 4, 400),
 			grid_color,
 			1.0
 		)
@@ -130,15 +208,15 @@ func _on_grid_overlay_draw():
 	# Draw horizontal lines
 	for y in range(0, 101, grid_size):
 		grid_overlay.draw_line(
-			Vector2(0, y),
-			Vector2(100, y),
+			Vector2(0, y * 4),
+			Vector2(400, y * 4),
 			grid_color,
 			1.0
 		)
 	
 	# Draw border
 	grid_overlay.draw_rect(
-		Rect2(0, 0, 100, 100),
+		world_bounds,
 		Color(0.4, 0.4, 0.4, 0.5),
 		false,
 		2.0
@@ -213,6 +291,17 @@ func setup_minimap():
 	# In full implementation, would create a minimap camera
 	# that renders simplified version of the world
 	pass
+
+# === NAVIGATION HELPERS ===
+func get_navigation_path(from: Vector2, to: Vector2) -> PackedVector2Array:
+	# Use NavigationServer2D for path queries
+	var map = navigation_region.get_navigation_map()
+	return NavigationServer2D.map_get_path(map, from, to, true)
+
+func is_position_navigable(pos: Vector2) -> bool:
+	var map = navigation_region.get_navigation_map()
+	var closest_point = NavigationServer2D.map_get_closest_point(map, pos)
+	return closest_point.distance_to(pos) < 1.0
 
 # Debug action mappings to add:
 # debug_spawn_npc: N

@@ -28,3 +28,12 @@ horizontal_alignment = 1
 [node name="SelectionIndicator" type="Node2D" parent="."]
 
 [node name="GroupIndicator" type="Node2D" parent="."]
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+path_desired_distance = 4.0
+target_desired_distance = 4.0
+path_max_distance = 10.0
+avoidance_enabled = true
+radius = 2.0
+neighbor_distance = 10.0
+max_speed = 50.0

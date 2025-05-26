@@ -6,9 +6,19 @@ var all_pois: Array[POI] = []
 var pois_by_id: Dictionary = {}  # poi_id -> POI
 var pois_by_type: Dictionary = {}  # POIType -> Array[POI]
 
+# === NAVIGATION REFERENCE ===
+var navigation_map_rid: RID  # Reference to navigation map
+
 func _ready():
 	print("POIManager initialized")
 	create_world_pois()
+	
+	# Get navigation map reference after scene is ready
+	call_deferred("setup_navigation_reference")
+
+func setup_navigation_reference():
+	# Get the default navigation map for 2D
+	navigation_map_rid = NavigationServer2D.get_maps()[0]
 
 func _process(delta: float):
 	# Update all POIs
@@ -116,6 +126,168 @@ func find_nearest_trading_post(position: Vector2) -> POI:
 func find_nearest_safe_base(position: Vector2) -> POI:
 	var safe_types = [POI.POIType.MAIN_BASE, POI.POIType.CIVILIAN_SETTLEMENT, POI.POIType.STALKER_HIDEOUT]
 	return find_nearest_poi(position, func(poi): return poi.poi_type in safe_types)
+
+# === NAVIGATION-AWARE SEARCH FUNCTIONS ===
+func find_nearest_reachable_poi(from_position: Vector2, filter_func: Callable = Callable()) -> POI:
+	"""Find nearest POI that can be reached via navigation"""
+	var best_poi: POI = null
+	var best_distance: float = INF
+	
+	# Check if we have valid navigation map
+	if not navigation_map_rid.is_valid():
+		# Fallback to simple nearest search
+		return find_nearest_poi(from_position, filter_func)
+	
+	for poi in all_pois:
+		if filter_func.is_valid() and not filter_func.call(poi):
+			continue
+		
+		# Quick straight-line distance check first
+		var straight_distance = from_position.distance_to(poi.position)
+		if straight_distance > best_distance * 1.5:  # Skip if too far even in straight line
+			continue
+		
+		# Get navigation path
+		var path = NavigationServer2D.map_get_path(
+			navigation_map_rid, 
+			from_position, 
+			poi.position, 
+			true  # optimize
+		)
+		
+		if path.size() > 0:
+			var path_distance = calculate_path_distance(path)
+			if path_distance < best_distance:
+				best_distance = path_distance
+				best_poi = poi
+	
+	return best_poi
+
+func find_nearest_reachable_with_resource(from_position: Vector2, resource_type: String) -> POI:
+	return find_nearest_reachable_poi(from_position, func(poi): return poi.has_resource(resource_type))
+
+func find_nearest_reachable_with_slot(from_position: Vector2, slot_type: int) -> POI:
+	return find_nearest_reachable_poi(from_position, func(poi): return poi.get_available_slots_count(slot_type) > 0)
+
+func find_all_reachable_pois(from_position: Vector2, max_distance: float = 100.0) -> Array[POI]:
+	"""Find all POIs reachable within a certain path distance"""
+	var reachable_pois: Array[POI] = []
+	
+	if not navigation_map_rid.is_valid():
+		# Fallback to simple distance check
+		for poi in all_pois:
+			if from_position.distance_to(poi.position) <= max_distance:
+				reachable_pois.append(poi)
+		return reachable_pois
+	
+	for poi in all_pois:
+		# Quick check
+		if from_position.distance_to(poi.position) > max_distance * 1.5:
+			continue
+		
+		var path = NavigationServer2D.map_get_path(
+			navigation_map_rid, 
+			from_position, 
+			poi.position, 
+			true
+		)
+		
+		if path.size() > 0:
+			var path_distance = calculate_path_distance(path)
+			if path_distance <= max_distance:
+				reachable_pois.append(poi)
+	
+	return reachable_pois
+
+func calculate_path_distance(path: PackedVector2Array) -> float:
+	"""Calculate total distance of a navigation path"""
+	if path.size() < 2:
+		return 0.0
+	
+	var total_distance = 0.0
+	for i in range(path.size() - 1):
+		total_distance += path[i].distance_to(path[i + 1])
+	
+	return total_distance
+
+func get_pois_in_navigation_range(from_position: Vector2, navigation_distance: float) -> Array[POI]:
+	"""Get all POIs within a certain navigation distance (not straight-line distance)"""
+	var pois_in_range: Array[POI] = []
+	
+	if not navigation_map_rid.is_valid():
+		return find_all_reachable_pois(from_position, navigation_distance)
+	
+	for poi in all_pois:
+		# Early rejection based on straight-line distance
+		if from_position.distance_to(poi.position) > navigation_distance * 2.0:
+			continue
+		
+		# Check actual navigation distance
+		var path = NavigationServer2D.map_get_path(
+			navigation_map_rid, 
+			from_position, 
+			poi.position, 
+			true
+		)
+		
+		if path.size() > 0:
+			var path_distance = calculate_path_distance(path)
+			if path_distance <= navigation_distance:
+				pois_in_range.append(poi)
+	
+	return pois_in_range
+
+func is_position_navigable(pos: Vector2) -> bool:
+	"""Check if a position is on navigable terrain"""
+	if not navigation_map_rid.is_valid():
+		return true  # Assume navigable if no nav map
+	
+	var closest_point = NavigationServer2D.map_get_closest_point(navigation_map_rid, pos)
+	return closest_point.distance_to(pos) < 4.0  # Within 4 units is considered navigable
+
+func get_navigation_path(from: Vector2, to: Vector2) -> PackedVector2Array:
+	"""Get navigation path between two points"""
+	if not navigation_map_rid.is_valid():
+		# Return direct path if no navigation
+		return PackedVector2Array([from, to])
+	
+	return NavigationServer2D.map_get_path(navigation_map_rid, from, to, true)
+
+func find_safest_path_to_poi(from_position: Vector2, target_poi: POI) -> POI:
+	"""Find POI that can be reached with least exposure to dangerous areas"""
+	# In a more complete implementation, this would consider:
+	# - Anomaly zones along the path
+	# - Hostile group territories
+	# - Environmental hazards
+	
+	# For now, just return the POI if reachable
+	var path = get_navigation_path(from_position, target_poi.position)
+	if path.size() > 0:
+		return target_poi
+	return null
+
+# === POI ACCESSIBILITY ===
+func update_poi_accessibility():
+	"""Update which POIs are accessible via navigation"""
+	for poi in all_pois:
+		# Check if POI position is on navigable terrain
+		poi.is_accessible = is_position_navigable(poi.position)
+		
+		# Update visual indicator if POI is inaccessible
+		if not poi.is_accessible:
+			EventBus.emit_signal("poi_accessibility_changed", poi, false)
+
+func get_alternative_poi(original_poi: POI, from_position: Vector2) -> POI:
+	"""Find alternative POI of same type if original is unreachable"""
+	if not original_poi:
+		return null
+	
+	# Find POIs of same type
+	var same_type_pois = get_pois_by_type(original_poi.poi_type)
+	same_type_pois.erase(original_poi)  # Remove the original
+	
+	# Find nearest reachable alternative
+	return find_nearest_reachable_poi(from_position, func(poi): return poi in same_type_pois)
 
 # === RESOURCE MANAGEMENT ===
 func request_resource(poi: POI, requester: NPC, resource_type: String) -> bool:

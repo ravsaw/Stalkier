@@ -135,7 +135,7 @@ func spawn_single_npc():
 	randomize_npc_stats(npc)
 	
 	# Set spawn position (edge of map)
-	npc.position = get_random_spawn_position() * 4
+	npc.position = get_random_spawn_position() * 6
 	npc.target_position = npc.position
 	
 	# Give starting equipment
