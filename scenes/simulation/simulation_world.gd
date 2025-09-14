@@ -33,6 +33,9 @@ func _ready():
 	EventBus.connect("npc_spawned", _on_npc_spawned)
 	EventBus.connect("npc_died", _on_npc_died)
 	
+	# Connect to world manager events
+	WorldManager.connect("npc_state_changed", _on_npc_state_changed)
+	
 	# Create visuals for existing entities
 	create_all_visuals()
 	
@@ -113,6 +116,10 @@ func create_all_visuals():
 func create_npc_visual(npc: NPC):
 	if npc.npc_id in npc_nodes:
 		return  # Already exists
+	
+	# Only create 2D visuals for NPCs in 2D state
+	if npc.get_representation_state() != "2d":
+		return
 	
 	var npc_node = npc_2d_scene.instantiate()
 	npc_node.setup(npc)
@@ -223,13 +230,29 @@ func _on_grid_overlay_draw():
 	)
 
 func _on_npc_spawned(npc: NPC):
-	create_npc_visual(npc)
+	# Only create visual if NPC is in 2D state
+	if npc.get_representation_state() == "2d":
+		create_npc_visual(npc)
 
 func _on_npc_died(npc: NPC, _killer: NPC):
 	if npc.npc_id in npc_nodes:
 		var node = npc_nodes[npc.npc_id]
 		npc_nodes.erase(npc.npc_id)
 		node.queue_free()
+
+func _on_npc_state_changed(npc: NPC, from_state: String, to_state: String):
+	"""Handle NPC state transitions for 2D visuals"""
+	match to_state:
+		"2d":
+			# Create 2D visual if transitioning to 2D
+			if npc.npc_id not in npc_nodes:
+				create_npc_visual(npc)
+		"3d", "despawned":
+			# Remove 2D visual if transitioning away from 2D
+			if npc.npc_id in npc_nodes:
+				var node = npc_nodes[npc.npc_id]
+				npc_nodes.erase(npc.npc_id)
+				node.queue_free()
 
 func _on_npc_clicked(npc: NPC):
 	# Deselect previous

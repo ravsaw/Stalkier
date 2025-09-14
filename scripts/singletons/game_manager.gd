@@ -25,6 +25,9 @@ func _ready():
 	# Connect to events
 	EventBus.connect("npc_died", _on_npc_died)
 	
+	# Run hybrid system tests
+	call_deferred("run_system_tests")
+	
 	# Initialize world
 	call_deferred("initialize_game_world")
 
@@ -47,7 +50,14 @@ func initialize_game_world():
 	# Form initial groups
 	form_initial_groups()
 	
+	# Create demonstration scenario
+	call_deferred("create_demo_scenario")
+	
 	print("World initialization complete!")
+
+func create_demo_scenario():
+	"""Create hybrid system demonstration scenario"""
+	HybridDemo.create_demonstration_scenario()
 
 func spawn_initial_population():
 	var initial_count = NPCManager.minimum_population
@@ -230,3 +240,9 @@ func add_test_resources():
 		poi.available_resources["medical"] += 20
 		poi.available_resources["ammo"] += 30
 	print("Test resources added to all POIs")
+
+func run_system_tests():
+	"""Run hybrid system tests"""
+	print("Running hybrid 2D/3D world system tests...")
+	HybridSystemTest.run_tests()
+	print("System tests completed!")
