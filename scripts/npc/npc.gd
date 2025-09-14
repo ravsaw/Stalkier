@@ -62,11 +62,19 @@ var movement_speed: float = 50.0
 
 # === NAVIGATION ===
 var navigation_agent: NavigationAgent2D = null
+var navigation_agent_3d: NavigationAgent3D = null
 var navigation_update_timer: float = 0.0
 var navigation_update_interval: float = 0.5  # Update path every 0.5 seconds
 var is_navigating: bool = false
 var stuck_timer: float = 0.0
 var last_position: Vector2
+
+# === 2D/3D STATE MANAGEMENT ===
+var representation_state: String = "2d"  # "2d", "3d", or "despawned"
+var state_transition_timer: float = 0.0
+var last_distance_check: float = 0.0
+var current_area_id: String = ""
+var position_3d: Vector3 = Vector3.ZERO
 
 # === INVENTORY ===
 var inventory: NPCInventory
@@ -113,18 +121,75 @@ func set_navigation_agent(agent: NavigationAgent2D):
 		navigation_agent.radius = 2.0
 		navigation_agent.max_speed = movement_speed
 
+func set_navigation_agent_3d(agent: NavigationAgent3D):
+	"""Set the 3D navigation agent for this NPC"""
+	navigation_agent_3d = agent
+	if navigation_agent_3d:
+		# Configure 3D navigation agent
+		navigation_agent_3d.path_desired_distance = 4.0
+		navigation_agent_3d.target_desired_distance = 4.0
+		navigation_agent_3d.path_max_distance = 6.0
+		navigation_agent_3d.navigation_layers = 1
+		navigation_agent_3d.avoidance_enabled = true
+		navigation_agent_3d.radius = 2.0
+		navigation_agent_3d.max_speed = movement_speed
+
+func get_representation_state() -> String:
+	"""Get current representation state"""
+	return representation_state
+
+func set_representation_state(new_state: String):
+	"""Set representation state and handle transitions"""
+	if representation_state == new_state:
+		return
+	
+	var old_state = representation_state
+	representation_state = new_state
+	state_transition_timer = 0.0
+	
+	# Handle state-specific logic
+	match new_state:
+		"3d":
+			# Convert position to 3D coordinates
+			position_3d = CoordinateConverter.world_2d_to_local_3d(position, Vector2.ZERO)
+			# Use 3D navigation if available
+			if navigation_agent_3d:
+				navigation_agent_3d.target_position = position_3d
+		"2d":
+			# Update 2D position from 3D if needed
+			if old_state == "3d":
+				position = CoordinateConverter.local_3d_to_world_2d(position_3d, Vector2.ZERO)
+			# Use 2D navigation
+			if navigation_agent:
+				navigation_agent.target_position = position
+		"despawned":
+			# Stop all navigation
+			is_navigating = false
+	
+	# Emit transition event
+	EventBus.emit_signal("npc_state_changed", self, old_state, new_state)
+
 func update(delta: float):
+	# Skip update if despawned
+	if representation_state == "despawned":
+		return
+	
 	# Update needs
 	update_needs(delta)
 	
 	# Update AI
 	brain.update(delta)
 	
-	# Update navigation
-	update_navigation(delta)
+	# Update navigation based on current state
+	if representation_state == "3d":
+		update_navigation_3d(delta)
+		update_movement_3d(delta)
+	else:
+		update_navigation(delta)
+		update_movement(delta)
 	
-	# Update movement
-	update_movement(delta)
+	# Update state transition timer
+	state_transition_timer += delta
 
 func update_needs(delta: float):
 	# Decay rates per hour (game time)
@@ -567,7 +632,11 @@ func move_in_formation(formation_position: Vector2, leader: NPC, formation_type:
 
 func get_facing_direction() -> Vector2:
 	"""Get the direction NPC is facing based on movement"""
-	if is_navigating and navigation_agent:
+	if representation_state == "3d" and navigation_agent_3d:
+		var next_pos = navigation_agent_3d.get_next_path_position()
+		var direction_3d = (next_pos - position_3d).normalized()
+		return Vector2(direction_3d.x, direction_3d.z)
+	elif is_navigating and navigation_agent:
 		var next_pos = navigation_agent.get_next_path_position()
 		return (next_pos - position).normalized()
 	elif target_position.distance_to(position) > 0.1:
@@ -575,3 +644,127 @@ func get_facing_direction() -> Vector2:
 	else:
 		# Default to facing right if stationary
 		return Vector2.RIGHT
+
+# === 3D NAVIGATION METHODS ===
+func update_navigation_3d(delta: float):
+	"""Update 3D navigation"""
+	if not navigation_agent_3d:
+		return
+	
+	navigation_update_timer += delta
+	
+	# Update navigation path periodically
+	if navigation_update_timer >= navigation_update_interval:
+		navigation_update_timer = 0.0
+		
+		var target_3d = CoordinateConverter.world_2d_to_local_3d(target_position, Vector2.ZERO)
+		if position_3d.distance_to(target_3d) > 1.0:
+			set_navigation_target_3d(target_3d)
+		else:
+			is_navigating = false
+	
+	# Check if stuck in 3D
+	if is_navigating:
+		var current_2d = Vector2(position_3d.x, position_3d.z)
+		var last_2d = Vector2(last_position.x, last_position.y)
+		
+		if current_2d.distance_to(last_2d) < 0.1:
+			stuck_timer += delta
+			if stuck_timer > 2.0:  # Stuck for 2 seconds
+				handle_stuck_state_3d()
+		else:
+			stuck_timer = 0.0
+			last_position = current_2d
+
+func update_movement_3d(delta: float):
+	"""Update 3D movement"""
+	if not navigation_agent_3d or not is_navigating:
+		return
+	
+	if navigation_agent_3d.is_navigation_finished():
+		is_navigating = false
+		return
+	
+	var next_position = navigation_agent_3d.get_next_path_position()
+	var direction = (next_position - position_3d).normalized()
+	var move_distance = movement_speed * delta
+	
+	# Check distance to next waypoint
+	if position_3d.distance_to(next_position) <= move_distance:
+		position_3d = next_position
+	else:
+		position_3d += direction * move_distance
+	
+	# Update 2D position for compatibility
+	position = Vector2(position_3d.x, position_3d.z)
+
+func set_navigation_target_3d(target_3d: Vector3):
+	"""Set 3D navigation target"""
+	if navigation_agent_3d:
+		navigation_agent_3d.target_position = target_3d
+		is_navigating = true
+		navigation_update_timer = 0.0
+
+func handle_stuck_state_3d():
+	"""Handle stuck state in 3D navigation"""
+	stuck_timer = 0.0
+	
+	# Try a slight random offset to unstick
+	var random_offset = Vector3(
+		randf_range(-10, 10),
+		0,
+		randf_range(-10, 10)
+	)
+	
+	var target_3d = CoordinateConverter.world_2d_to_local_3d(target_position, Vector2.ZERO)
+	set_navigation_target_3d(target_3d + random_offset)
+	
+	# Notify brain that we're stuck
+	if brain and brain.current_goal:
+		brain.current_goal.handle_navigation_stuck()
+
+func can_reach_position_3d(check_position: Vector3) -> bool:
+	"""Check if NPC can reach a 3D position"""
+	if not navigation_agent_3d:
+		return true  # Assume reachable if no navigation
+	
+	# Quick distance check first
+	if position_3d.distance_to(check_position) > 1000:
+		return false
+	
+	# Use navigation to check if path exists
+	navigation_agent_3d.target_position = check_position
+	var path = navigation_agent_3d.get_current_navigation_path()
+	
+	return path.size() > 0
+
+func get_effective_position() -> Vector2:
+	"""Get effective 2D position regardless of current state"""
+	if representation_state == "3d":
+		return Vector2(position_3d.x, position_3d.z)
+	else:
+		return position
+
+func get_effective_position_3d() -> Vector3:
+	"""Get effective 3D position regardless of current state"""
+	if representation_state == "3d":
+		return position_3d
+	else:
+		return Vector3(position.x, 0, position.y)
+
+func transition_to_area(area_id: String, new_position: Vector2):
+	"""Transition NPC to a different area"""
+	current_area_id = area_id
+	position = new_position
+	target_position = new_position
+	
+	# Update 3D position if in 3D mode
+	if representation_state == "3d":
+		position_3d = CoordinateConverter.world_2d_to_local_3d(position, Vector2.ZERO)
+	
+	# Reset navigation
+	is_navigating = false
+	stuck_timer = 0.0
+	
+	# Emit area transition event
+	EventBus.emit_signal("npc_area_changed", self, area_id)

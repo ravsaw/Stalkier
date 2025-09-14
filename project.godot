@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 EventBus="*res://scripts/singletons/event_bus.gd"
 GameManager="*res://scripts/singletons/game_manager.gd"
+WorldManager="*res://scripts/singletons/world_manager.gd"
 NPCManager="*res://scripts/singletons/npc_manager.gd"
 GroupManager="*res://scripts/singletons/group_manager.gd"
 CombatManager="*res://scripts/singletons/combat_manager.gd"
