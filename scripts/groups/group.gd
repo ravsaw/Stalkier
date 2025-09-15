@@ -32,6 +32,16 @@ enum GroupSpecialization {
 	BANDIT         # Bandycka
 }
 
+enum GroupActivity {
+	WANDERING,      # Swobodne wędrowanie
+	PATROLLING,     # Patrol określonej trasy
+	GUARDING,       # Ochrona punktu
+	TRADING,        # Handel
+	EXPLORING,      # Eksploracja
+	RESTING,        # Odpoczynek
+	COMBAT          # Walka
+}
+
 func _init():
 	group_id = generate_unique_id()
 	formation_date = Time.get_unix_time_from_system()

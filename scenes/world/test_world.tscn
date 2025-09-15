@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=3 uid="uid://bfg6pvx1g2cj5"]
+
+[ext_resource type="Script" uid="uid://b8h2x8q8jyqkq" path="res://scripts/world/test_world.gd" id="1_test"]
+
+[node name="TestWorld" type="Node"]
+script = ExtResource("1_test")
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -50.0
+offset_right = 100.0
+offset_bottom = 50.0
+text = "Testing Hybrid 2D/3D World System
+
+Press T to toggle modes
+Press F12 for debug info
+WASD to move camera"
+horizontal_alignment = 1
+vertical_alignment = 1

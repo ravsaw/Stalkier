@@ -1,7 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://rax45aar45pm"]
+[gd_scene load_steps=3 format=3 uid="uid://rax45aar45pm"]
 
-[ext_resource type="PackedScene" uid="uid://bwm8gx0hcr1ap" path="res://scenes/world/world_main.tscn" id="1_new_world"]
+[ext_resource type="PackedScene" uid="uid://bwm8gx0hcr1ap" path="res://scenes/world/world_main.tscn" id="1_world_main"]
+[ext_resource type="PackedScene" uid="uid://bfg6pvx1g2cj5" path="res://scenes/world/test_world.tscn" id="2_test_world"]
 
 [node name="Main" type="Node"]
 
-[node name="WorldMain" parent="." instance=ExtResource("1_new_world")]
+[node name="WorldMain" parent="." instance=ExtResource("1_world_main")]
+
+[node name="TestWorld" parent="." instance=ExtResource("2_test_world")]
