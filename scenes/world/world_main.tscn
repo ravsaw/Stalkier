@@ -1,0 +1,76 @@
+[gd_scene load_steps=2 format=3 uid="uid://bwm8gx0hcr1ap"]
+
+[ext_resource type="Script" uid="uid://b8h2x8q8jyqkq" path="res://scripts/world/world_main.gd" id="1_8y8m0"]
+
+[node name="WorldMain" type="Node"]
+script = ExtResource("1_8y8m0")
+
+[node name="2DWorld" type="Node2D" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="2DWorld"]
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+
+[node name="Areas2D" type="Node2D" parent="2DWorld"]
+
+[node name="NPCs2D" type="Node2D" parent="2DWorld"]
+
+[node name="Effects2D" type="Node2D" parent="2DWorld"]
+
+[node name="UI2D" type="CanvasLayer" parent="2DWorld"]
+
+[node name="3DWorld" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="3DWorld"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 10, 20)
+
+[node name="Areas3D" type="Node3D" parent="3DWorld"]
+
+[node name="NPCs3D" type="Node3D" parent="3DWorld"]
+
+[node name="Effects3D" type="Node3D" parent="3DWorld"]
+
+[node name="Environment" type="Node3D" parent="3DWorld"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="3DWorld/Environment"]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
+
+[node name="UI3D" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TransitionOverlay" type="ColorRect" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0)
+mouse_filter = 2
+
+[node name="DebugInfo" type="VBoxContainer" parent="."]
+layout_mode = 0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -150.0
+offset_right = 300.0
+offset_bottom = -10.0
+
+[node name="ModeLabel" type="Label" parent="DebugInfo"]
+layout_mode = 2
+text = "Mode: 2D"
+
+[node name="AreaLabel" type="Label" parent="DebugInfo"]
+layout_mode = 2
+text = "Area: Central"
+
+[node name="NPCCountLabel" type="Label" parent="DebugInfo"]
+layout_mode = 2
+text = "NPCs: 0"
+
+[node name="PerformanceLabel" type="Label" parent="DebugInfo"]
+layout_mode = 2
+text = "FPS: 60"

@@ -58,15 +58,40 @@ var relationships: Dictionary = {}  # npc_id -> relationship_value (-100 to 100)
 var brain: NPCBrain
 var position: Vector2
 var target_position: Vector2
+var position_3d: Vector3 = Vector3()  # For hybrid 2D/3D support
+var target_position_3d: Vector3 = Vector3()  # For hybrid 2D/3D support
 var movement_speed: float = 50.0
+var velocity: Vector2 = Vector2()  # Current velocity in 2D
+var velocity_3d: Vector3 = Vector3()  # Current velocity in 3D
+
+# === HYBRID MODE SUPPORT ===
+var current_mode: WorldManager.WorldMode = WorldManager.WorldMode.MODE_2D
+var ai_can_change_modes: bool = true
+var preferred_mode: WorldManager.WorldMode = WorldManager.WorldMode.MODE_2D
+var hybrid_agent: HybridNPCAgent = null
 
 # === NAVIGATION ===
 var navigation_agent: NavigationAgent2D = null
+var navigation_agent_3d: NavigationAgent3D = null
 var navigation_update_timer: float = 0.0
 var navigation_update_interval: float = 0.5  # Update path every 0.5 seconds
 var is_navigating: bool = false
 var stuck_timer: float = 0.0
 var last_position: Vector2
+var last_position_3d: Vector3 = Vector3()
+
+# === LOD SYSTEM ===
+var current_lod_level: int = 0
+var ai_update_complexity: float = 1.0
+
+# === GROUP RELATIONSHIPS ===
+var is_group_leader: bool = false
+var group_specialization: Group.GroupSpecialization = Group.GroupSpecialization.UNIVERSAL
+
+# === STATE TRACKING ===
+var alertness_level: int = 0  # 0 = relaxed, 3 = high alert
+var morale: float = 100.0
+var memory: NPCMemory  # Will be set up in _init
 
 # === INVENTORY ===
 var inventory: NPCInventory
@@ -96,7 +121,10 @@ func _init():
 	brain.owner_npc = self
 	inventory = NPCInventory.new()
 	inventory.owner_npc = self
+	memory = NPCMemory.new()
+	memory.owner_npc = self
 	last_position = position
+	last_position_3d = position_3d
 
 func generate_unique_id() -> String:
 	return "npc_" + str(Time.get_unix_time_from_system()) + "_" + str(randi())
@@ -575,3 +603,112 @@ func get_facing_direction() -> Vector2:
 	else:
 		# Default to facing right if stationary
 		return Vector2.RIGHT
+
+# === HYBRID 2D/3D MODE SUPPORT ===
+
+func setup_hybrid_agent():
+	"""Initialize the hybrid agent for 2D/3D mode switching"""
+	if not hybrid_agent:
+		hybrid_agent = HybridNPCAgent.new(self)
+
+func set_lod_level(lod_level: int):
+	"""Set Level of Detail level for performance optimization"""
+	current_lod_level = lod_level
+	
+	# Adjust AI complexity based on LOD
+	match lod_level:
+		0:  # Highest detail
+			ai_update_complexity = 1.0
+		1:  # High detail
+			ai_update_complexity = 0.8
+		2:  # Medium detail
+			ai_update_complexity = 0.5
+		3:  # Low detail
+			ai_update_complexity = 0.2
+		_:  # Very low detail or culled
+			ai_update_complexity = 0.1
+
+func update_ai(delta: float):
+	"""Update AI with complexity scaling"""
+	if brain and ai_update_complexity > 0.1:
+		brain.update(delta * ai_update_complexity)
+
+func update_basic_state(delta: float):
+	"""Update only basic NPC state (used when AI complexity is very low)"""
+	update_needs(delta * 0.5)  # Slower need decay when not actively simulated
+	
+	# Basic movement without complex AI
+	if position.distance_to(target_position) > 1.0:
+		var direction = (target_position - position).normalized()
+		position += direction * movement_speed * delta * 0.5
+
+func is_in_combat() -> bool:
+	"""Check if NPC is currently in combat"""
+	return brain.current_goal and brain.current_goal.goal_type == Goal.GoalType.COMBAT
+
+func can_transition_modes() -> bool:
+	"""Check if NPC can switch between 2D and 3D modes"""
+	return ai_can_change_modes and not is_in_combat()
+
+func set_current_mode(new_mode: WorldManager.WorldMode):
+	"""Set the current world mode for this NPC"""
+	if current_mode != new_mode:
+		current_mode = new_mode
+		
+		# Update navigation agent reference based on mode
+		if hybrid_agent:
+			hybrid_agent.set_mode(new_mode)
+
+func get_position_for_mode(mode: WorldManager.WorldMode) -> Vector2:
+	"""Get position in the specified mode (returns 2D position for both modes)"""
+	if mode == WorldManager.WorldMode.MODE_2D:
+		return position
+	else:
+		return WorldManager.coordinate_converter.convert_3d_to_2d(position_3d)
+
+func set_navigation_target_for_mode(target: Vector2, mode: WorldManager.WorldMode = WorldManager.WorldMode.MODE_2D):
+	"""Set navigation target for specified mode"""
+	if mode == WorldManager.WorldMode.MODE_2D:
+		set_navigation_target(target)
+	else:
+		var target_3d = WorldManager.coordinate_converter.convert_2d_to_3d(target)
+		set_navigation_target_3d(target_3d)
+
+func set_navigation_target_3d(target_3d: Vector3):
+	"""Set 3D navigation target"""
+	target_position_3d = target_3d
+	
+	if navigation_agent_3d:
+		navigation_agent_3d.target_position = target_3d
+		is_navigating = true
+
+func get_interaction_range_for_mode(mode: WorldManager.WorldMode) -> float:
+	"""Get interaction range based on current mode"""
+	if mode == WorldManager.WorldMode.MODE_2D:
+		return 15.0  # Larger range in 2D top-down view
+	else:
+		return 5.0   # Smaller range in 3D first-person view
+
+func can_interact_with_npc(other_npc: NPC) -> bool:
+	"""Check if this NPC can interact with another NPC in current mode"""
+	var my_pos = get_position_for_mode(current_mode)
+	var other_pos = other_npc.get_position_for_mode(current_mode)
+	var interaction_range = get_interaction_range_for_mode(current_mode)
+	
+	return my_pos.distance_to(other_pos) <= interaction_range
+
+func get_debug_info_hybrid() -> Dictionary:
+	"""Get debug information including hybrid mode data"""
+	var base_info = to_dict()
+	
+	base_info["current_mode"] = WorldManager.WorldMode.keys()[current_mode]
+	base_info["position_3d"] = {"x": position_3d.x, "y": position_3d.y, "z": position_3d.z}
+	base_info["can_change_modes"] = ai_can_change_modes
+	base_info["preferred_mode"] = WorldManager.WorldMode.keys()[preferred_mode]
+	base_info["lod_level"] = current_lod_level
+	base_info["ai_complexity"] = ai_update_complexity
+	base_info["is_group_leader"] = is_group_leader
+	base_info["alertness_level"] = alertness_level
+	base_info["morale"] = morale
+	
+	return base_info
